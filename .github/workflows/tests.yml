@@ -1,0 +1,24 @@
+name: Run the tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    # no services needed: Pub/Sub is faked in-process (pstest), RabbitMQ is not contacted
+    - name: Run tests
+      run: go test -race ./...

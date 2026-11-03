@@ -1,0 +1,68 @@
+# see https://golangci-lint.run/usage/configuration/#config-file
+version: "2"
+linters:
+  # please, do not use `default: all`: every golangci-lint update would then enable new linters
+  default: none
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - nlreturn
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - wrapcheck
+  settings:
+    funlen:
+      lines: 90
+      statements: 50
+    goconst:
+      # logrus field names repeat by design
+      ignore-string-values:
+        - ^(user_id|email|audience)$
+    wrapcheck:
+      # echo's responses and HTTP errors are meant to be returned as they are
+      ignore-package-globs:
+        - github.com/labstack/echo/v4
+      extra-ignore-sigs:
+        - "(*html/template.Template).ExecuteTemplate("
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
