@@ -41,7 +41,7 @@ type Event struct {
 	Type   EventType
 	Source string
 	UserID int64
-	// when the event was created, i.e. right after (sso) or before (user-data) the database write
+	// when the event was created, i.e. right after the database write
 	OccurredAt time.Time
 	Body       []byte
 }

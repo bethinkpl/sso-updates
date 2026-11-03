@@ -8,9 +8,8 @@ import (
 
 // Publishes every event to both brokers while the consumers move from one to the other.
 //
-// It stops at the first failure: the request then fails and is retried as a whole. Publishing to
-// the second broker after the first one failed could leave an event the database never got
-// (user-data broadcasts before writing) on the broker the consumers still read.
+// It stops at the first failure: the request then fails and is retried as a whole, which sends the
+// event to both brokers again - the data has already been written, so the retry is safe.
 type dualBroker struct {
 	first  broker
 	second broker
