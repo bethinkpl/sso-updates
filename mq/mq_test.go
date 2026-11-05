@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"cloud.google.com/go/pubsub/v2/pstest"
 )
 
 const testSource = "sso"
@@ -25,19 +27,14 @@ func TestBroadcastWithoutInitIsDisabled(t *testing.T) {
 	}
 }
 
-func TestInitRequiresRabbitMQDSN(t *testing.T) {
-	if err := Init(context.Background(), Config{Source: testSource}); err == nil {
-		t.Fatal("Init accepted a configuration without RABBITMQ_DSN")
-	}
-
-	if current.Load() != nil {
-		t.Error("a failed Init enabled broadcasting")
-	}
-}
-
 func TestInitAndClose(t *testing.T) {
+	server := pstest.NewServer()
+	t.Cleanup(func() { _ = server.Close() })
+	t.Setenv(envPubSubEmulatorHost, server.Addr)
+
 	// no connection is made until the first broadcast
-	if err := Init(context.Background(), Config{Source: testSource, RabbitMQDSN: "amqp://localhost:5672/"}); err != nil {
+	config := Config{Source: testSource, PubSubProjectID: testProject, PubSubTopicID: testTopic}
+	if err := Init(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 

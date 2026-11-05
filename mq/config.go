@@ -8,22 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Where the broadcasts are sent
-type Mode string
-
-const (
-	// RabbitMQ only, the default
-	ModeRabbit Mode = "rabbit"
-	// both RabbitMQ and Pub/Sub, while the consumers move to Pub/Sub
-	ModeDual Mode = "dual"
-	// Pub/Sub only
-	ModePubSub Mode = "pubsub"
-)
-
 // The environment variables of the configuration
 const (
-	envBrokerMode         = "BROKER_MODE"
-	envRabbitMQDSN        = "RABBITMQ_DSN"
 	envPubSubProjectID    = "PUBSUB_PROJECT_ID"
 	envPubSubTopicID      = "PUBSUB_TOPIC_ID"
 	envPubSubEndpoint     = "PUBSUB_ENDPOINT"
@@ -36,10 +22,7 @@ const defaultPubSubEndpoint = "europe-west1-pubsub.googleapis.com:443"
 
 type Config struct {
 	// the service sending the events: "sso" or "user-data"
-	Source string
-	// empty means ModeRabbit
-	Mode            Mode
-	RabbitMQDSN     string
+	Source          string
 	PubSubProjectID string
 	PubSubTopicID   string
 	// empty when the client talks to the emulator (PUBSUB_EMULATOR_HOST)
@@ -49,11 +32,6 @@ type Config struct {
 
 // Read the configuration from the environment variables
 func ConfigFromEnv(source string, log logrus.FieldLogger) Config {
-	mode := Mode(os.Getenv(envBrokerMode))
-	if mode == "" {
-		mode = ModeRabbit
-	}
-
 	endpoint := os.Getenv(envPubSubEndpoint)
 	if endpoint == "" {
 		endpoint = defaultPubSubEndpoint
@@ -66,8 +44,6 @@ func ConfigFromEnv(source string, log logrus.FieldLogger) Config {
 
 	return Config{
 		Source:          source,
-		Mode:            mode,
-		RabbitMQDSN:     os.Getenv(envRabbitMQDSN),
 		PubSubProjectID: os.Getenv(envPubSubProjectID),
 		PubSubTopicID:   os.Getenv(envPubSubTopicID),
 		PubSubEndpoint:  endpoint,
@@ -75,38 +51,20 @@ func ConfigFromEnv(source string, log logrus.FieldLogger) Config {
 	}
 }
 
-func (c Config) usesRabbit() bool {
-	return c.Mode == ModeRabbit || c.Mode == ModeDual
-}
-
-func (c Config) usesPubSub() bool {
-	return c.Mode == ModePubSub || c.Mode == ModeDual
-}
-
-// Report a mode that does not exist or the settings missing for it
+// Report the settings that are missing
 func (c Config) validate() error {
-	switch c.Mode {
-	case ModeRabbit, ModeDual, ModePubSub:
-	default:
-		return fmt.Errorf("%s %q is not one of: %s, %s, %s", envBrokerMode, c.Mode, ModeRabbit, ModeDual, ModePubSub)
-	}
-
 	var missing []string
 
-	if c.usesRabbit() && c.RabbitMQDSN == "" {
-		missing = append(missing, envRabbitMQDSN)
-	}
-
-	if c.usesPubSub() && c.PubSubProjectID == "" {
+	if c.PubSubProjectID == "" {
 		missing = append(missing, envPubSubProjectID)
 	}
 
-	if c.usesPubSub() && c.PubSubTopicID == "" {
+	if c.PubSubTopicID == "" {
 		missing = append(missing, envPubSubTopicID)
 	}
 
 	if len(missing) > 0 {
-		return fmt.Errorf("%s %s needs the %s env var(s)", envBrokerMode, c.Mode, strings.Join(missing, ", "))
+		return fmt.Errorf("broadcasting needs the %s env var(s)", strings.Join(missing, ", "))
 	}
 
 	return nil

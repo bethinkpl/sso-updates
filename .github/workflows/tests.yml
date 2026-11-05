@@ -19,6 +19,6 @@ jobs:
       with:
         go-version-file: go.mod
 
-    # no services needed: Pub/Sub is faked in-process (pstest), RabbitMQ is not contacted
+    # no services needed: Pub/Sub is faked in-process (pstest)
     - name: Run tests
       run: go test -race ./...

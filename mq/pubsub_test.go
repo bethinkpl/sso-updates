@@ -187,12 +187,11 @@ func TestPubSubCloseStopsPublishing(t *testing.T) {
 }
 
 // the local and CI setup: configured from the environment, connected to an emulator, no credentials
-func TestPubSubModeFromTheEnvironmentWithAnEmulator(t *testing.T) {
+func TestPubSubFromTheEnvironmentWithAnEmulator(t *testing.T) {
 	server := pstest.NewServer()
 	t.Cleanup(func() { _ = server.Close() })
 
 	t.Setenv("PUBSUB_EMULATOR_HOST", server.Addr)
-	t.Setenv("BROKER_MODE", string(ModePubSub))
 	t.Setenv("PUBSUB_PROJECT_ID", testProject)
 	t.Setenv("PUBSUB_TOPIC_ID", testTopic)
 

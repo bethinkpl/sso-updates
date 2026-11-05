@@ -5,7 +5,7 @@ The broadcasts of user changes sent by [sso](https://github.com/bethinkpl/sso) a
 [user-data](https://github.com/bethinkpl/user-data) to the services that keep their own copy of the user data
 (every wnl-platform instance and e-commerce): email updates, forced logouts, personal data updates and deletions.
 
-The messages, their metadata, the `BROKER_MODE` configuration and the local Pub/Sub emulator are described in
+The messages, their metadata, the configuration and the local Pub/Sub emulator are described in
 [`mq/README.md`](mq/README.md). **The message bodies are a contract with the consumers: their shape must not change.**
 
 ## Usage
@@ -17,7 +17,7 @@ go get github.com/bethinkpl/sso-updates@<version>
 ```go
 import "github.com/bethinkpl/sso-updates/mq"
 
-// once, before serving requests: BROKER_MODE, RABBITMQ_DSN, PUBSUB_* env vars
+// once, before serving requests: PUBSUB_* env vars
 if err := mq.Init(ctx, mq.ConfigFromEnv("sso", log)); err != nil { ... }
 defer mq.Close(ctx)
 
