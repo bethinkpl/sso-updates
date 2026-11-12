@@ -36,10 +36,6 @@ var current atomic.Pointer[state]
 
 // Set up broadcasting. Call it once, before any request is served.
 func Init(ctx context.Context, config Config) error {
-	if config.Mode == "" {
-		config.Mode = ModeRabbit
-	}
-
 	if err := config.validate(); err != nil {
 		return err
 	}
@@ -49,44 +45,14 @@ func Init(ctx context.Context, config Config) error {
 		log = logrus.StandardLogger()
 	}
 
-	broker, err := newBroker(ctx, config, log)
+	publisher, err := newPubSubBroker(ctx, config, log)
 	if err != nil {
 		return err
 	}
 
-	current.Store(&state{source: config.Source, broker: broker})
+	current.Store(&state{source: config.Source, broker: countedBroker{name: brokerPubSub, broker: publisher}})
 
 	return nil
-}
-
-// The broker(s) of the configured mode
-func newBroker(ctx context.Context, config Config, log logrus.FieldLogger) (broker, error) {
-	var rabbit, pubsub broker
-
-	if config.usesRabbit() {
-		rabbit = countedBroker{name: brokerRabbitMQ, broker: &rabbitBroker{dsn: config.RabbitMQDSN, log: log}}
-	}
-
-	if config.usesPubSub() {
-		publisher, err := newPubSubBroker(ctx, config, log)
-		if err != nil {
-			return nil, err
-		}
-
-		pubsub = countedBroker{name: brokerPubSub, broker: publisher}
-	}
-
-	switch config.Mode {
-	case ModeDual:
-		// Pub/Sub first: once a consumer reads Pub/Sub, an event missing there is lost for it
-		return dualBroker{first: pubsub, second: rabbit}, nil
-	case ModePubSub:
-		return pubsub, nil
-	case ModeRabbit:
-		return rabbit, nil
-	}
-
-	return nil, fmt.Errorf("unknown %s %q", envBrokerMode, config.Mode)
 }
 
 // Broadcast the payload as an event about the given user and wait until the broker confirms it.

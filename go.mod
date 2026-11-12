@@ -7,7 +7,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/sirupsen/logrus v1.10.2
-	github.com/streadway/amqp v1.1.0
 	google.golang.org/api v0.288.0
 	google.golang.org/grpc v1.83.2
 )

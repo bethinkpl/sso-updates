@@ -6,11 +6,7 @@ import (
 	"testing"
 )
 
-const testRabbitMQDSN = "amqp://rabbit:5672/"
-
-var brokerEnvVars = []string{
-	envBrokerMode, envRabbitMQDSN, envPubSubProjectID, envPubSubTopicID, envPubSubEndpoint, envPubSubEmulatorHost,
-}
+var brokerEnvVars = []string{envPubSubProjectID, envPubSubTopicID, envPubSubEndpoint, envPubSubEmulatorHost}
 
 // start every test from an empty broker configuration
 func clearBrokerEnv(t *testing.T) {
@@ -25,15 +21,13 @@ func TestConfigFromEnvDefaults(t *testing.T) {
 	clearBrokerEnv(t)
 
 	config := ConfigFromEnv("user-data", nil)
-	if config.Source != "user-data" || config.Mode != ModeRabbit || config.PubSubEndpoint != defaultPubSubEndpoint {
+	if config.Source != "user-data" || config.PubSubEndpoint != defaultPubSubEndpoint {
 		t.Errorf("unexpected configuration %+v", config)
 	}
 }
 
 func TestConfigFromEnv(t *testing.T) {
 	clearBrokerEnv(t)
-	t.Setenv(envBrokerMode, string(ModeDual))
-	t.Setenv(envRabbitMQDSN, testRabbitMQDSN)
 	t.Setenv(envPubSubProjectID, "bethink-development")
 	t.Setenv(envPubSubTopicID, testTopic)
 	t.Setenv(envPubSubEndpoint, "europe-central2-pubsub.googleapis.com:443")
@@ -41,8 +35,6 @@ func TestConfigFromEnv(t *testing.T) {
 	config := ConfigFromEnv(testSource, nil)
 	expected := Config{
 		Source:          testSource,
-		Mode:            ModeDual,
-		RabbitMQDSN:     testRabbitMQDSN,
 		PubSubProjectID: "bethink-development",
 		PubSubTopicID:   testTopic,
 		PubSubEndpoint:  "europe-central2-pubsub.googleapis.com:443",
@@ -65,25 +57,15 @@ func TestConfigFromEnvWithAnEmulator(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	rabbit := testRabbitMQDSN
-	pubsubOnly := Config{Mode: ModePubSub, PubSubProjectID: testProject, PubSubTopicID: testTopic}
-
 	cases := []struct {
 		name    string
 		config  Config
 		missing []string
 	}{
-		{"rabbit", Config{Mode: ModeRabbit, RabbitMQDSN: rabbit}, nil},
-		{"rabbit without DSN", Config{Mode: ModeRabbit}, []string{envRabbitMQDSN}},
-		{"pubsub mode", pubsubOnly, nil},
-		{"pubsub without project", Config{Mode: ModePubSub, PubSubTopicID: testTopic}, []string{envPubSubProjectID}},
-		{"pubsub without topic", Config{Mode: ModePubSub, PubSubProjectID: testProject}, []string{envPubSubTopicID}},
-		{
-			"dual",
-			Config{Mode: ModeDual, RabbitMQDSN: rabbit, PubSubProjectID: testProject, PubSubTopicID: testTopic},
-			nil,
-		},
-		{"dual without anything", Config{Mode: ModeDual}, []string{envRabbitMQDSN, envPubSubProjectID, envPubSubTopicID}},
+		{"complete", Config{PubSubProjectID: testProject, PubSubTopicID: testTopic}, nil},
+		{"without project", Config{PubSubTopicID: testTopic}, []string{envPubSubProjectID}},
+		{"without topic", Config{PubSubProjectID: testProject}, []string{envPubSubTopicID}},
+		{"without anything", Config{}, []string{envPubSubProjectID, envPubSubTopicID}},
 	}
 
 	for _, c := range cases {
@@ -107,16 +89,9 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsAnUnknownMode(t *testing.T) {
-	err := Config{Mode: "kafka", RabbitMQDSN: testRabbitMQDSN}.validate()
-	if err == nil || !strings.Contains(err.Error(), "kafka") {
-		t.Errorf("unexpected error %v", err)
-	}
-}
-
 func TestInitRejectsAnIncompleteConfiguration(t *testing.T) {
-	if err := Init(context.Background(), Config{Mode: ModeDual, RabbitMQDSN: testRabbitMQDSN}); err == nil {
-		t.Fatal("Init accepted dual mode without the Pub/Sub settings")
+	if err := Init(context.Background(), Config{Source: testSource, PubSubProjectID: testProject}); err == nil {
+		t.Fatal("Init accepted a configuration without the topic")
 	}
 
 	if current.Load() != nil {

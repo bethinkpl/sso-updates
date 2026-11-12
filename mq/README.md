@@ -5,39 +5,25 @@ Both import this package from `github.com/bethinkpl/sso-updates/mq`, so they alw
 
 ## Transport
 
-| | |
-|---|---|
-| RabbitMQ | durable `fanout` exchange `sso.updates.broadcast`, `content_type: application/json` |
-| GCP Pub/Sub | one topic (`PUBSUB_TOPIC_ID`), one subscription per consumer, **ordering key = user ID** |
-
-`BROKER_MODE` chooses where the broadcasts go:
-
-| `BROKER_MODE` | Broadcasts go to | Needs |
-|---|---|---|
-| `rabbit` (default) | RabbitMQ | `RABBITMQ_DSN` |
-| `dual` | Pub/Sub, then RabbitMQ | `RABBITMQ_DSN`, `PUBSUB_PROJECT_ID`, `PUBSUB_TOPIC_ID` |
-| `pubsub` | Pub/Sub | `PUBSUB_PROJECT_ID`, `PUBSUB_TOPIC_ID` |
+GCP Pub/Sub: one topic (`PUBSUB_TOPIC_ID`), one subscription per consumer, **ordering key = user ID**.
 
 | Variable | Meaning |
 |---|---|
-| `PUBSUB_PROJECT_ID` | GCP project of the topic, e.g. `bethink-prod` |
-| `PUBSUB_TOPIC_ID` | the topic: `sso-updates-events` |
+| `PUBSUB_PROJECT_ID` | required, GCP project of the topic, e.g. `bethink-prod` |
+| `PUBSUB_TOPIC_ID` | required, the topic: `sso-updates-events` |
 | `PUBSUB_ENDPOINT` | optional, `europe-west1-pubsub.googleapis.com:443` by default: messages are kept in order only when they are published in one region |
 | `PUBSUB_EMULATOR_HOST` | local development only, e.g. `pubsub:8085` |
 
-A Pub/Sub broadcast succeeds only once Pub/Sub has stored the message, otherwise the request fails with HTTP 500.
-RabbitMQ publishing is unchanged until it is removed: without publisher confirms, so it fails only when the message
-cannot be written to the connection. In `dual` mode Pub/Sub goes first and RabbitMQ is not tried when Pub/Sub fails - a retried
-request then sends the event again to both. The publisher only needs the `roles/pubsub.publisher` role on the
-topic; it never looks the topic up. Without credentials (and without an emulator) the service refuses to start.
+A broadcast succeeds only once Pub/Sub has stored the message, otherwise the request fails with HTTP 500.
+The publisher only needs the `roles/pubsub.publisher` role on the topic; it never looks the topic up. Without
+credentials (and without an emulator) the service refuses to start.
 
 Every message is about a single user. Messages are delivered **at least once**: consumers must cope with duplicates.
-`mq_broadcasts_total{broker, event_type, result}` counts the broadcasts per broker - in `dual` mode the counts of
-both brokers must match.
+`mq_broadcasts_total{broker, event_type, result}` counts the broadcasts.
 
 ## Body
 
-The body is the JSON below, unchanged since the exchange was created. **Its shape must not change**: the consumers
+The body is the JSON below, unchanged since the first broadcasts. **Its shape must not change**: the consumers
 tell the messages apart by the keys that are present. Every field marked as optional is left out when empty.
 
 | `event_type` | Sent by | Body |
@@ -51,7 +37,7 @@ tell the messages apart by the keys that are present. Every field marked as opti
 
 ## Metadata
 
-Sent next to the body (Pub/Sub attributes) and never inside it. RabbitMQ messages carry the body only.
+Sent next to the body (Pub/Sub attributes) and never inside it.
 
 | Name | Example | Meaning |
 |---|---|---|
@@ -85,7 +71,7 @@ curl -X PUT localhost:8085/v1/projects/local-project/subscriptions/sso-updates-l
   -d '{"topic": "projects/local-project/topics/sso-updates-events", "enableMessageOrdering": true}'
 
 # run the service with
-# BROKER_MODE=dual PUBSUB_EMULATOR_HOST=localhost:8085 PUBSUB_PROJECT_ID=local-project PUBSUB_TOPIC_ID=sso-updates-events
+# PUBSUB_EMULATOR_HOST=localhost:8085 PUBSUB_PROJECT_ID=local-project PUBSUB_TOPIC_ID=sso-updates-events
 
 # read what was broadcast
 curl -X POST localhost:8085/v1/projects/local-project/subscriptions/sso-updates-local:pull \

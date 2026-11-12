@@ -7,13 +7,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// The broker names in the metrics and the errors
-const (
-	brokerRabbitMQ = "rabbitmq"
-	brokerPubSub   = "pubsub"
-)
+// The broker name in the metrics and the errors
+const brokerPubSub = "pubsub"
 
-// Every broadcast per broker - during the migration the counts of both brokers must match
+// Every broadcast per broker
 var broadcastsTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "mq_broadcasts_total",

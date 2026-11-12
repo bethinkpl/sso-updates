@@ -34,7 +34,7 @@ const (
 const occurredAtFormat = "2006-01-02T15:04:05.000Z"
 
 // A single broadcast: the JSON body the consumers parse and the metadata sent next to it
-// (Pub/Sub attributes, AMQP properties).
+// (the Pub/Sub attributes).
 type Event struct {
 	// unique per event, lets consumers drop the duplicates
 	ID     string
